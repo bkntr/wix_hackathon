@@ -6,8 +6,11 @@ import word2vec
 import numpy as np
 from scipy.sparse import csr_matrix
 from nltk.stem.lancaster import LancasterStemmer
-from lasagne.layers import InputLayer, DenseLayer
+import lasagne
+from lasagne.layers import InputLayer, DenseLayer, get_output
 from lasagne.objectives import categorical_crossentropy
+from lasagne.nonlinearities import softmax
+from theano import tensor as T
 
 
 def words_set(words_fname):
@@ -65,6 +68,23 @@ if __name__ == '__main__':
 
     bows_count = np.memmap('bows_count.bin', dtype='uint16', mode='r', shape=(len(hashid), len(words_set)))
     bows_binary = np.memmap('bows_binary.bin', dtype='uint8', mode='r', shape=(len(hashid), len(words_set)))
+
+    batch_size = 32
+    hidden_units = [256, 128]
+    sig_width = 100
+
+    input_var = T.fmatrix('inputs')
+    target_var = T.ivector('targets')
+
+    input_layer = InputLayer(shape=(32, len(bows_binary.shape[1])), name='input_layer', input_var=input_var)
+    hidden = DenseLayer(input_layer, hidden_units[0])
+    for ne in hidden_units[1:]:
+        hidden = DenseLayer(hidden, ne)
+    output_layer = DenseLayer(hidden, sig_width, nonlinearity=softmax)
+    prediction = get_output(output_layer)
+
+    loss = categorical_crossentropy(prediction, target_var)
+
 
 
 
